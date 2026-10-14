@@ -2,7 +2,7 @@ name: Tests
 
 on:
   pull_request:
-    paths: [radar.py, config.json, 'tests/**', '.github/workflows/**']
+    paths: [radar.py, translate_titles.py, requirements-translation.txt, config.json, 'tests/**', '.github/workflows/**']
   workflow_dispatch:
 
 permissions:

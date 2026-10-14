@@ -2,12 +2,14 @@ name: News radar
 
 on:
   schedule:
-    - cron: '0 0 * * *' # UTC+8: every day at 08:00
+    - cron: '17 0,6,12 * * *' # UTC+8: 08:17, 14:17, 20:17
   workflow_dispatch:
   push:
     branches: [main]
     paths:
       - radar.py
+      - translate_titles.py
+      - requirements-translation.txt
       - config.json
       - tests/**
       - .github/workflows/radar.yml
@@ -15,6 +17,7 @@ on:
 # No repository writes and no personal access token are needed.
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: news-radar
@@ -39,6 +42,37 @@ jobs:
         run: |
           python radar.py --check
           python -m unittest discover -s tests -v
+      - name: Install offline translation dependencies
+        id: translation_dependencies
+        continue-on-error: true
+        run: python -m pip install --disable-pip-version-check -r requirements-translation.txt
+      - name: Cache offline translation model
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .models/
+          key: argos-en-zh-1.9-433e7c4f
+      - name: Prepare verified translation model
+        id: model
+        continue-on-error: true
+        run: python translate_titles.py --prepare
+      - name: Restore recent editions
+        id: history
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .state/history.json
+          key: radar-history-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            radar-history-v1-
+      - name: Recover earlier editions when history cache is missing
+        if: steps.history.outputs.cache-matched-key == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/radar-history"
+          for run_id in $(gh run list --workflow radar.yml --status success --limit 3 --json databaseId --jq '.[].databaseId'); do
+            gh run download "$run_id" --name news-radar --dir "$RUNNER_TEMP/radar-history/$run_id" || echo "Previous artifact unavailable; skipped."
+          done
       - name: Restore fingerprints and cooldowns
         uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
@@ -48,7 +82,9 @@ jobs:
             radar-state-v1-${{ hashFiles('config.json') }}-
       - name: Collect public feeds and build report
         id: collect
-        run: python radar.py
+        env:
+          RADAR_MODEL_READY: ${{ steps.model.outcome == 'success' && steps.translation_dependencies.outcome == 'success' && 'success' || 'unavailable' }}
+        run: python radar.py --import-history-dir "$RUNNER_TEMP/radar-history"
       - name: Keep the report for one day
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -61,6 +97,11 @@ jobs:
         with:
           path: .state/state.json
           key: radar-state-v1-${{ hashFiles('config.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Save recent editions after report upload
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .state/history.json
+          key: radar-history-v1-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Package optional Pages site
         if: vars.ENABLE_PAGES == 'true'
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4

@@ -5,6 +5,7 @@ __pycache__/
 .env.*
 !.env.example
 .state/
+.models/
 site/
 output/
 .DS_Store
