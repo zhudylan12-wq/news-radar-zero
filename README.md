@@ -2,7 +2,11 @@
 
 定时整理 **AI 工具、Agent、开源、出海产品**的公开资讯。Python 标准库实现，没有付费 API、模型调用、数据库、服务器或账号 Cookie。
 
-**本地实现已完成，云端状态以 [验证记录](context/verification.md) 为准。**
+**已在 [zhudylan12-wq/news-radar-zero](https://github.com/zhudylan12-wq/news-radar-zero) 启用 GitHub Actions，两次云端验证运行成功（2026-10-14）。**
+
+[查看最新运行与报告附件](https://github.com/zhudylan12-wq/news-radar-zero/actions/workflows/radar.yml) · [验证记录](context/verification.md)
+
+打开最新成功运行，在页面下方 **Artifacts → news-radar** 下载并解压，打开 `index.html` 阅读。附件保留 1 天，需要登录 GitHub 下载。当前没有开启独立 Pages 网站。
 
 ## 第一版能力
 
