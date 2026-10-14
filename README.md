@@ -4,9 +4,11 @@
 
 **已在 [zhudylan12-wq/news-radar-zero](https://github.com/zhudylan12-wq/news-radar-zero) 启用 GitHub Actions；逐次云端验证结果见验证记录（2026-10-14）。**
 
-[查看最新运行与报告附件](https://github.com/zhudylan12-wq/news-radar-zero/actions/workflows/radar.yml) · [验证记录](context/verification.md)
+[打开在线资讯雷达](https://zhudylan12-wq.github.io/news-radar-zero/) · [查看最新运行与报告附件](https://github.com/zhudylan12-wq/news-radar-zero/actions/workflows/radar.yml) · [验证记录](context/verification.md)
 
-打开最新成功运行，在页面下方 **Artifacts → news-radar** 下载并解压，打开 `index.html` 阅读。页面顶部可按完整采集时间选择各期报告，默认最近 7 天、最多 30 期。附件保留 1 天，需要登录 GitHub 下载；每份最新附件包含当时保留的历史。当前没有开启独立 Pages 网站，下载文件不会自动刷新。
+直接打开上面的在线链接即可阅读，无需登录或下载文件。每天北京时间 **08:17 / 14:17 / 20:17** 采集成功后自动部署，重新打开或刷新页面即可查看最新一期；顶部可按完整采集时间选择各期报告，保留最近 7 天、最多 30 期。页面公开可见，使用 GitHub Pages 免费默认域名。
+
+需要离线保存时，仍可进入最新成功运行，在页面下方 **Artifacts → news-radar** 下载并解压，再打开 `index.html`。附件保留 1 天，需要登录 GitHub 下载；下载副本不会自动更新。若采集全部失败、中文翻译不完整或部署失败，线上保留上一份成功部署的报告，请以页面“最新采集”时间为准。
 
 ## 第一版能力
 
@@ -52,14 +54,14 @@ python3 -m http.server 8765 --directory site
   → 生成可按时间选择的 HTML / Markdown / JSON（包括失败来源）
   → 上传 1 天有效的 news-radar 报告附件
   → 分别缓存哈希指纹、退避时间和近期历史报告
-  → 可选发布 GitHub Pages
+  → 自动发布 GitHub Pages（本仓库已开启）
 ```
 
 - 计划每天北京时间 / 台北时间 **08:17、14:17、20:17** 运行三次，对应 UTC `17 0,6,12 * * *`。HTML 显示实际采集时间，包含日期、时分秒，不伪装成计划时间。GitHub 可能延迟或丢弃排队任务，不承诺准点。
 - 首次推送到 `main` 会自动运行，之后可在 Actions → News radar → Run workflow 手动执行。
 - 只允许在**公开仓库**运行云端任务。私有仓库直接跳过，避免使用共享付费额度。标准 `ubuntu-latest` runner，不用 larger runner。
-- 默认不开启 Pages。运行成功后在 Actions 的本次运行里下载 `news-radar` 附件，解压查看。附件保留 1 天，包含最近 7 天的报告；源码和运行统计不含第三方帖子正文。
-- 需要公开阅读页面时，在仓库 Settings → Pages 中选择 GitHub Actions，并设置 Actions Variable `ENABLE_PAGES=true`，随后手动运行一次。开启意味着报告可公开访问。
+- 本仓库经用户授权已开启 Pages：Settings → Pages 的构建类型为 GitHub Actions，Actions Variable `ENABLE_PAGES=true`。每次成功运行自动发布至同一网址，无需手动下载。Fork 的仓库默认不带此变量；需要自行启用 Pages 才会公开报告。
+- 离线附件仍保留 1 天，包含最近 7 天的报告；源码和运行统计不含第三方帖子正文。
 - Actions 不写仓库，无需 PAT 或平台密钥。抓取代码不读取 Cookie、会话或本机浏览器资料。
 - 定时任务只运行默认分支。公开仓库 60 天没有活动时，GitHub 可能自动停用定时任务；届时手动重新启用。这里没有空提交或保活刷活动逻辑。
 
@@ -72,7 +74,7 @@ python3 -m http.server 8765 --directory site
 - 历史报告另存 Actions cache，包含原始标题、中文译文、来源链接、时间和来源状态，保留最近 7 天、最多 30 期，不保存帖子全文或 Cookie。同一标题复用已有译文。缓存丢失时尝试从最近 3 次成功运行的未过期附件恢复，不能承诺完整历史。
 - 429 尊重 `Retry-After`，至少退避 1 小时；无该字段时 6 小时，更长的服务端等待要求不会被缩短。同一域名其他订阅源也停止请求，跨次保留退避。401 / 403 / 410 退避 6 小时。不会换代理、绕过验证码、伪造身份或使用付费兜底。
 - 来源状态分别为：可用、空列表、无近期匹配、访问受限、限流、失败、退避中。部分失败仍产出报告；全部不可用时保留诊断附件并让工作流失败。
-- `site/`、`.state/` 和 `.models/` 均被 Git 忽略，避免内容和模型进入 Git 历史。附件 1 天过期；可选 Pages 的最新部署包含近期报告，不提供永久内容归档。源帖删除不会实时同步到历史快照。
+- `site/`、`.state/` 和 `.models/` 均被 Git 忽略，避免内容和模型进入 Git 历史。附件 1 天过期；Pages 的最新部署包含近期报告，不提供永久内容归档。源帖删除不会实时同步到历史快照。
 - Pages 是静态快照：调度停止后页面不会自行删除。需要清理时停用 Pages；源帖删除不会实时同步到已生成的快照。
 - 当前没有邮件、飞书或 Telegram 推送。工作流失败通知由 GitHub 账号的通知设置决定；是否送达未经验证。
 
