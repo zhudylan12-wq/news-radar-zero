@@ -7,7 +7,7 @@ import re
 from urllib import request
 import zipfile
 
-MODEL_URL = "https://argos-net.com/v1/translate-en_zh-1_9.argosmodel"
+MODEL_URL = "https://data.argosopentech.com/argospm/v1/translate-en_zh-1_9.argosmodel"
 MODEL_SHA256 = "433e7c4f034d87fbe2353161e05f18646d7999452f801a4e1f0378522b9850ab"
 MODEL_FOLDER = "translate-en_zh-1_9"
 PROVIDER = "Argos / OPUS-MT 英译中 1.9（离线）"
@@ -147,3 +147,7 @@ if __name__ == "__main__":
     if args.prepare:
         folder = prepare_model()
         print(f"Offline translation model verified and prepared: {folder}")
+        result = OfflineTranslator()(["An open source AI tool"])
+        if not result or not re.search(r"[\u4e00-\u9fff]", result[0]):
+            raise RuntimeError("Offline translation smoke check failed")
+        print("Offline translation smoke check passed")

@@ -5,7 +5,7 @@
 - 原始模型许可：CC-BY 4.0，见随模型提供的 README。
 - 论文：OPUS-MT — Building open translation services for the World，EAMT 2020，Lisbon, Portugal。
 - 模型索引：https://github.com/argosopentech/argospm-index
-- 模型下载：https://argos-net.com/v1/translate-en_zh-1_9.argosmodel
+- 模型下载：https://data.argosopentech.com/argospm/v1/translate-en_zh-1_9.argosmodel （Argos 官方数据站；与索引原链接的包校验值一致）
 - SHA-256：`433e7c4f034d87fbe2353161e05f18646d7999452f801a4e1f0378522b9850ab`
 - 来源项目：https://github.com/argosopentech/argos-translate
 - 推理引擎：https://github.com/OpenNMT/CTranslate2 ，MIT。

@@ -524,6 +524,7 @@ def main():
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
             f.write(f"health={report['health']}\n")
+            f.write(f"translation_status={report['translation']['status']}\n")
     # Complete the report even when sources fail, so the user can see evidence.
     # The workflow checks health after preserving the diagnostic artifact.
     return 0
