@@ -13,7 +13,7 @@
 - 第一次云端运行：[38536445039](https://github.com/zhudylan12-wq/news-radar-zero/actions/runs/38536445039)，触发方式 `push`，最终 `success`。
 - 云端采集时间：2026-10-14 16:37:46（UTC+8）。7 / 10 个来源可用，共 56 条、首次展示 56 条。Reddit LocalLLaMA 可读，ChatGPTCoding 返回 HTTP 429，SaaS 和 SideProject 随域名退避而跳过。其余来源可读。
 - 报告附件 `news-radar`，31,737 字节，API 确认过期时间为 2026-10-15 16:38:08（UTC+8）。已下载并核对真实 JSON 内容。
-- GitHub API 确认工作流状态为 `active`；计划每天 UTC+8 08:17 / 14:17 / 20:17 运行。首次定时触发尚未等待到，当前验证了推送和手动触发。
+- GitHub API 确认工作流状态为 `active`；2026-10-14 用户要求改为每天 UTC+8 08:00 运行一次，对应 UTC cron `0 0 * * *`。首次定时触发尚未等待到，当前验证了推送和手动触发。
 - 第二次云端运行：[38536629940](https://github.com/zhudylan12-wq/news-radar-zero/actions/runs/38536629940)，触发方式 `workflow_dispatch`，最终 `success`。采集时间 2026-10-14 16:39:21（UTC+8）。
 - 第二次运行从第一次运行的 cache key 恢复成功，并重新保存状态；日志、缓存 API 和下载的报告交叉验证。缓存压缩大小分别为 3,171 和 5,673 字节。
 - 第二次报告为 48 条，47 条此前未展示、1 条重复条目正确标为非 NEW；与第一份报告对照，错误 NEW 标记为 0。此前因每来源上限而未展示的条目可在第二轮继续展示，47 条不代表两分钟内新增 47 条原帖。
@@ -32,3 +32,7 @@
 - 用户本轮消息与 `README.md` 中官方文档链接。
 - `tests/test_radar.py`、`.github/workflows/radar.yml`、`.github/workflows/test.yml`。
 - 本地运行产物 `site/latest.json`（被 Git 忽略，不进入仓库历史）。
+
+## 已替代
+
+- 初始每天 UTC+8 08:17 / 14:17 / 20:17 三次运行的安排，已由用户在 2026-10-14 指定的每天 08:00 一次取代。

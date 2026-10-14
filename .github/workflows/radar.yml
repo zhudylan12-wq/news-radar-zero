@@ -2,7 +2,7 @@ name: News radar
 
 on:
   schedule:
-    - cron: '17 0,6,12 * * *' # UTC+8: 08:17, 14:17, 20:17
+    - cron: '0 0 * * *' # UTC+8: every day at 08:00
   workflow_dispatch:
   push:
     branches: [main]

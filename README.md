@@ -50,7 +50,7 @@ python3 -m http.server 8765 --directory site
   → 可选发布 GitHub Pages
 ```
 
-- 计划北京时间 / 台北时间 **08:17、14:17、20:17** 运行，对应 UTC `17 0,6,12 * * *`。GitHub 可能延迟或丢弃排队任务，不承诺准点。
+- 计划每天北京时间 / 台北时间 **08:00** 运行一次，对应 UTC `0 0 * * *`。GitHub 可能延迟或丢弃排队任务，不承诺准点。
 - 首次推送到 `main` 会自动运行，之后可在 Actions → News radar → Run workflow 手动执行。
 - 只允许在**公开仓库**运行云端任务。私有仓库直接跳过，避免使用共享付费额度。标准 `ubuntu-latest` runner，不用 larger runner。
 - 默认不开启 Pages。运行成功后在 Actions 的本次运行里下载 `news-radar` 附件，解压查看。附件保留 1 天；源码和运行统计不含第三方帖子正文。

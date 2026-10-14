@@ -402,7 +402,7 @@ def render_html(report):
 <body><main><header><div class="eyebrow">NEWS RADAR / ZERO COST</div><h1>{esc(report['title'])}</h1><p>AI 工具、Agent、开源与出海</p><p class="meta">快照：{display_time(report['generated_at'],tz)}（UTC+8） · 共 {len(report['items'])} 条 · 首次展示 {report['new_count']} 条 · 可访问来源 {report['available_sources']}/{len(report['sources'])}</p><a href="latest.md">Markdown</a> · <a href="latest.json">JSON</a></header>
 <p class="notice">X 内容来自公开搜索索引，可能延迟、遗漏。来源访问失败不代表没有更新。此页面是标注时间的快照，请结合更新时间阅读。</p>{empty}{''.join(groups)}
 <section><h2>来源状态</h2><div class="table-wrap"><table><thead><tr><th>来源</th><th>状态</th><th>获取 / 匹配 / 展示</th><th>说明</th></tr></thead><tbody>{rows}</tbody></table></div></section>
-<footer><strong>阅读边界</strong><ul>{''.join('<li>'+esc(v)+'</li>' for v in report['limitations'])}</ul><p>无付费 API、无模型调用。计划每天 08:17 / 14:17 / 20:17 更新（UTC+8）；GitHub 调度可能延迟。</p></footer></main></body></html>'''
+<footer><strong>阅读边界</strong><ul>{''.join('<li>'+esc(v)+'</li>' for v in report['limitations'])}</ul><p>无付费 API、无模型调用。计划每天 08:00 更新一次（UTC+8）；GitHub 调度可能延迟。</p></footer></main></body></html>'''
 
 
 def main():
