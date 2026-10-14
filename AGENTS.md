@@ -11,6 +11,7 @@
 - 采集、去重、状态和主页面在 `radar.py` / `config.json`；精确筛选在 `relevance.py`，摘译在 `translate_titles.py`，每日简报在 `daily_brief.py`；GitHub 流程位于 `.github/workflows/`。
 - 生成报告和状态不进入 Git 历史。Pages 使用默认 github.io 免费域名，公开展示报告；不得添加付费托管或自购域名。发布验证状态见 context/verification.md。
 - 当前调度：每天北京时间 08:17、14:17、20:17 三次；用户要求 HTML 按真实采集时间区分各期，并显示中文标题。
+- 2026-10-14 用户要求优化中文与相关性，并明确选择每天 10:30 在本对话提醒、附简报链接。GitHub 在 UTC+8 10:20 预生成；原三次采集保留。使用已有报告去重摘编，不新增付费服务；提醒必须核对当日正式简报日期与材料时效。提醒任务已启用，状态与证据见 context/verification.md。
 - 历史保留最近 7 天、最多 30 期，在 HTML 顶部选择采集时间。标题用离线 Argos / OPUS-MT 模型翻译，保留原文；不调用付费翻译接口。模型及报告均不提交 Git。
 - 在线入口：https://zhudylan12-wq.github.io/news-radar-zero/ 。Pages 已开启，每次成功采集后自动部署；失败保留上次成功部署，页面时间是新鲜度依据。
 
@@ -22,5 +23,3 @@
 | 验证与发布状态 | 测试、验收、上线 | context/verification.md |
 
 运行 `python3 radar.py --check` 和 `python3 -m unittest discover -s tests -v`。真实源验证要保留失败状态，不能仅用模拟测试声称云端通过。
-
-- 2026-10-14 用户要求优化中文与相关性，并明确选择每天 10:30 在本对话提醒、附简报链接。GitHub 在 UTC+8 10:20 预生成；原三次采集保留。使用已有报告去重摘编，不新增付费服务；提醒必须核对当日正式简报日期与材料时效。
