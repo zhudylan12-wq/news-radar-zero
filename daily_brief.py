@@ -31,6 +31,9 @@ def build_brief(reports, now, kind='daily'):
         for item in report['items']:
             key = item_keys(item)[0]
             first_seen.setdefault(key, collected)
+            if item.get('translation_status') in {'needs_review', 'unavailable'}:
+                candidates.pop(key, None)
+                continue
             relevant_time = first_seen[key] if item['platform'] == 'GitHub' else parse_date(item['published_at'])
             if relevant_time and cutoff <= relevant_time <= now:
                 candidates[key] = dict(item, discovered_at=iso(first_seen[key]))

@@ -65,6 +65,7 @@ class QualityBriefTests(unittest.TestCase):
         self.assertNotIn('https', ' '.join(parts))
         self.assertNotIn('#', ' '.join(parts))
         self.assertNotIn('🚀', ' '.join(parts))
+        self.assertIn('example_dev', ' '.join(translation_parts('AI tool released by @example_dev #AI')[1]))
 
     def test_repetition_and_decoder_collapse_are_rejected(self):
         self.assertFalse(valid_translation('道' * 30, 'A new AI tool for travel'))
@@ -77,6 +78,9 @@ class QualityBriefTests(unittest.TestCase):
         self.assertEqual(translated, 'Gemini 4 的AI 智能体使用 256k Token')
         self.assertEqual(polish_translation('双子座', 'Gemini constellation'), 'Gemini')
         self.assertEqual(polish_translation('代币', 'crypto coin'), '代币')
+        self.assertEqual(polish_translation('麻省理工学院', 'MIT university research'), '麻省理工学院')
+        self.assertEqual(polish_translation('麻省理工学院', 'owner/repo — AI tool. MIT.'), 'MIT 许可证')
+        self.assertEqual(polish_translation('Home Associate与VS代码使用0令牌', 'Home Assistant and VS Code use 0 tokens'), 'Home Assistant与VS Code使用0Token')
 
     def test_old_translations_are_regenerated(self):
         self.report['items'][0]['title_zh'] = '老版本错误译文'
@@ -101,6 +105,12 @@ class QualityBriefTests(unittest.TestCase):
         self.assertFalse(build_brief([self.report], NOW)['items'])
         old['platform'] = 'GitHub'
         self.assertEqual(len(build_brief([self.report], NOW)['items']), 1)
+
+    def test_digest_excludes_failed_translations_without_altering_history(self):
+        for status in ('needs_review', 'unavailable'):
+            self.report['items'][0]['translation_status'] = status
+            self.assertFalse(build_brief([self.report], NOW)['items'])
+            self.assertEqual(len(self.report['items']), 1)
 
     def test_regular_collection_does_not_rewrite_daily_digest(self):
         archive = update_briefs([self.report], [], NOW, publish=True)

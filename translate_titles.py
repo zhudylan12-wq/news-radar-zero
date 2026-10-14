@@ -11,7 +11,7 @@ MODEL_URL = "https://data.argosopentech.com/argospm/v1/translate-en_zh-1_9.argos
 MODEL_SHA256 = "433e7c4f034d87fbe2353161e05f18646d7999452f801a4e1f0378522b9850ab"
 MODEL_FOLDER = "translate-en_zh-1_9"
 PROVIDER = "Argos / OPUS-MT 英译中 1.9（离线）"
-TRANSLATION_VERSION = 2
+TRANSLATION_VERSION = 3
 
 
 def translation_parts(title):
@@ -25,7 +25,9 @@ def translation_parts(title):
         if repository:
             prefix, title = repository.groups()
     title = re.sub(r"https?://\S+|www\.\S+", "", title)
-    title = re.sub(r"(?<!\w)[#@][\w]+", "", title)
+    title = re.sub(r"(?<!\w)#[\w]+", "", title)
+    # Handles often name the author or product; dropping them changes attribution.
+    title = re.sub(r"(?<!\w)@([\w]+)", r"\1", title)
     title = re.sub(r"[\U0001F000-\U0001FFFF\u2600-\u27ff\u200b\ufe0f]", " ", title)
     title = re.sub(r"\s*[→►|]\s*", "; ", title)
     title = re.sub(r"\s+", " ", title).strip()
@@ -54,7 +56,9 @@ def polish_translation(text, original):
         r"\bPrized\b": {"获奖的": "Prized", "被授予的": "Prized"},
         r"\bfree\b": {"自由视频": "免费视频", "自由开放": "免费开源"},
         r"\blead generation\b": {"铅组": "获客流程", "铅生成": "获客"},
-        r"\btokens?\b": {"代币": "Token"},
+        r"\btokens?\b": {"代币": "Token", "令牌": "Token"},
+        r"\bVS Code\b": {"VS代码": "VS Code", "VS 代码": "VS Code"},
+        r"\bHome Assistant\b": {"Home Associate": "Home Assistant", "家庭助理": "Home Assistant", "家庭助手": "Home Assistant"},
         r"\b(LoRA|GGUFs?)\b": {"列车": "训练", "量产": "量化", "家长": "基础模型", "父母": "基础模型", "GGOF": "GGUF"},
         r"\b(ship|ships|shipping|shipped)\b": {"运送": "发布", "船只": "发布", "代码船": "代码发布"},
         r"\blaunch(es|ed)?\b": {"发射": "发布"},
@@ -70,6 +74,10 @@ def polish_translation(text, original):
         text = text.replace("探员", "智能体")
     if re.search(r"\bSaaS\b", original, re.I):
         text = text.replace("萨阿斯", "SaaS")
+    if re.search(r"\bMIT\b", original) and (re.match(r"^[\w.-]+/[\w.-]+ — ", original) or re.search(r"\blicen[cs]e\b", original, re.I)):
+        text = text.replace("麻省理工学院", "MIT 许可证")
+    if re.search(r"\bskill for\b", original, re.I):
+        text = text.replace("技艺", "技能")
     text = re.sub(r"\{[^{}]*\\[^{}]*\}", "", text)
     text = re.sub(r"\s+([，。！？；：])", r"\1", text)
     return text.strip()
@@ -144,8 +152,13 @@ class OfflineTranslator:
                                              replace_unknowns=True, length_penalty=1,
                                              no_repeat_ngram_size=3, repetition_penalty=1.05)
         decoded = [clean_translation(self.tokenizer.decode(result.hypotheses[0])) for result in batches]
-        return [prefix + polish_translation(" ".join(decoded[start:end]), title)
-                for prefix, (start, end), title in zip(prefixes, ranges, titles)]
+        results = []
+        for prefix, (start, end), title in zip(prefixes, ranges, titles):
+            # A surviving later sentence must not mask a collapsed earlier one.
+            collapsed = any(len(source) > 60 and len(target) < len(source) * .20
+                            for source, target in zip(texts[start:end], decoded[start:end]))
+            results.append("" if collapsed else prefix + polish_translation(" ".join(decoded[start:end]), title))
+        return results
 
 
 def clean_translation(title):
