@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from urllib import error, parse, request
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
+from relevance import classify, refine_reports
 
 UTC = timezone.utc
 ATOM = "{http://www.w3.org/2005/Atom}"
@@ -249,13 +250,13 @@ def prepare_items(raw, source, cfg, now):
         if dt < cutoff or dt > now + timedelta(minutes=10):
             rejected["outside_window"] += 1
             continue
-        topics = [topic for topic, keywords in cfg["topics"].items() if any(matches_topic(title, k, cfg) for k in keywords)]
-        if source.get("require_keyword") and not topics:
+        topics, score, reason = classify(title, source)
+        if not topics:
             rejected["off_topic"] += 1
             continue
         item = {"title": title, "url": url, "published_at": iso(dt), "source_id": source["id"],
                 "source_name": source["name"], "platform": source["platform"], "access": source["access"],
-                "topics": topics or source["topics"], "date_basis": "索引时间，非原帖时间" if source["kind"] == "google_news" else "仓库创建时间" if source["kind"] == "github" else "原帖发布时间"}
+                "topics": topics, "relevance_score": score, "relevance_reason": reason, "date_basis": "索引时间，非原帖时间" if source["kind"] == "google_news" else "仓库创建时间" if source["kind"] == "github" else "原帖发布时间"}
         if "stars" in value:
             item["stars"] = value["stars"]
         if value.get("external_url"):
@@ -359,7 +360,7 @@ def collect(cfg, state, now, fetcher=fetch_bytes, sleeper=time.sleep):
     seen = {k: v for k, v in state["seen"].items() if parse_date(v) and retention <= parse_date(v) <= now}
     for item in candidates:
         item["is_new"] = not any(key in seen for key in item_keys(item))
-    candidates.sort(key=lambda i: (i["is_new"], i["published_at"]), reverse=True)
+    candidates.sort(key=lambda i: (i["is_new"], i.get("relevance_score", 0), i["published_at"]), reverse=True)
     items, run_keys, per_source = [], set(), {}
     for item in candidates:
         keys = item_keys(item)
@@ -459,8 +460,8 @@ def render_edition(report):
             label = "打开索引链接 ↗" if i["platform"] == "X" else "查看来源 ↗"
             title = i.get("title_zh") or i["title"]
             translated = bool(i.get("title_zh") and i["title_zh"] != i["title"])
-            original = f'<details class="original"><summary>查看原文 · 机器翻译供参考</summary><p lang="en">{esc(i["title"])}</p></details>' if translated else ''
-            fallback = ' · 中文翻译暂不可用，保留原文' if i.get('translation_status') == 'unavailable' else ''
+            original = f'<details class="original"><summary>查看原文 · 中文摘译供参考</summary><p lang="en">{esc(i["title"])}</p></details>' if translated else ''
+            fallback = ' · 中文翻译暂不可用，保留原文' if i.get('translation_status') in {'unavailable', 'needs_review'} else ''
             cards.append(f'''<article><div class="meta">{'<b>首次展示</b> · ' if i['is_new'] else ''}{esc(chinese_label(' / '.join(i['topics'])))}</div><h3><a href="{esc(i['url'], quote=True)}" target="_blank" rel="noopener noreferrer">{esc(title)}</a></h3>{original}<p class="meta">{esc(chinese_label(i['source_name']))} · {display_time(i['published_at'], tz)}<br>{esc(i['date_basis'])}{fallback}</p><a class="out" href="{esc(i['url'], quote=True)}" target="_blank" rel="noopener noreferrer">{label}</a></article>''')
         groups.append(f'<section><h2>{esc(platform)} <small>{len(cards)}</small></h2><div class="grid">{"".join(cards)}</div></section>')
     rows = "".join(f"<tr><td>{esc(chinese_label(s['name']))}</td><td>{STATUS_LABELS[s['status']]}</td><td>{s['fetched']} / {s['eligible']} / {s['shown']}</td><td>{esc(source_detail(s))}{' · 下次尝试 ' + display_time(s['retry_at'], tz) if s.get('retry_at') else ''}</td></tr>" for s in report["sources"])
@@ -484,8 +485,8 @@ def render_html(report, history=None):
     return f'''<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>{esc(report['title'])}</title>
 <style> :root{{font-family:system-ui,-apple-system,"PingFang SC",sans-serif;color:#20302c;background:#f4f5f0;line-height:1.6}}*{{box-sizing:border-box}}body{{margin:0}}main{{max-width:1120px;margin:auto;padding:48px 28px}}header{{border-bottom:2px solid #244b40;padding-bottom:24px}}.eyebrow{{letter-spacing:.15em;font-size:12px;color:#527265}}h1{{font-size:38px;letter-spacing:-.04em;margin:10px 0}}h2{{font-size:23px;margin-top:38px}}h3{{font-size:18px;line-height:1.55;margin:10px 0 18px;overflow-wrap:anywhere}}a{{color:inherit;text-underline-offset:4px}}h3 a{{text-decoration:none}}h3 a:hover{{text-decoration:underline}}.meta{{font-size:13px;color:#56675f}}b{{color:#23644c}}.notice{{border-left:3px solid #9c762a;padding:12px 18px;background:#fbf6e8;font-size:14px}}.grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}article{{padding:22px;background:#fff;border:1px solid #dbe2da;border-radius:8px}}.out{{font-size:13px;color:#23644c}}small{{color:#6e7b73;font-size:14px;font-weight:400}}.table-wrap{{overflow-x:auto}}table{{border-collapse:collapse;width:100%;font-size:13px}}td,th{{text-align:left;border-bottom:1px solid #dbe2da;padding:12px 10px}}th{{white-space:nowrap}}footer{{margin-top:40px;border-top:1px solid #ccd5cb;padding-top:20px;color:#56675f;font-size:13px}}li{{margin:6px 0}}a:focus-visible{{outline:3px solid #46886e;outline-offset:4px}}@media(max-width:650px){{main{{padding:28px 18px}}h1{{font-size:30px}}.grid{{grid-template-columns:1fr}}article{{padding:18px}}}}.schedule{{font-size:14px;color:#23644c}}.edition-picker{{display:flex;align-items:center;gap:12px;margin:20px 0;flex-wrap:wrap}}select{{font:inherit;color:inherit;background:#fff;border:1px solid #b6c9bd;border-radius:6px;padding:10px;max-width:100%}}.edition{{border:1px solid #cbd8cd;border-radius:8px;margin:14px 0;background:#fff;scroll-margin-top:20px}}.edition>summary{{padding:18px;cursor:pointer;list-style:none;display:flex;gap:14px;align-items:center;flex-wrap:wrap}}.edition>summary::before{{content:"＋";color:#23644c}}.edition[open]>summary::before{{content:"−"}}.edition[open]>summary{{border-bottom:1px solid #dbe2da;background:#eaf1e8}}.edition-tag{{font-size:12px;color:#23644c}}time{{font-weight:650;font-variant-numeric:tabular-nums}}.edition-count{{color:#56675f;font-size:13px}}.edition-body{{padding:6px 20px 22px}}.edition-body h2{{margin-top:24px}}.original{{font-size:13px;color:#56675f;margin:8px 0 16px}}.original summary,.sources summary{{cursor:pointer}}.original p{{overflow-wrap:anywhere}}.sources{{margin-top:24px}}@media(max-width:650px){{.edition-body{{padding:4px 12px 16px}}.edition>summary{{padding:14px;gap:8px}}select{{width:100%}}}}</style></head>
-<body><main><header><div class="eyebrow">个人资讯 · 中文阅读版</div><h1>{esc(report['title'])}</h1><p>AI 工具、智能体、开源与出海</p><p class="meta">最新采集：{latest}（北京时间 / UTC+8）</p><p class="schedule">每天 08:17 / 14:17 / 20:17 · 最近 {HISTORY_DAYS} 天 · 已收录 {len(editions)} 期</p><a href="latest.md">本期文字版</a> · <a href="history.json">各期数据</a></header>
-<p class="notice">中文标题由离线模型翻译，可展开原文核对。X 为搜索索引线索，可能延迟或遗漏；来源失败不代表没有更新。</p>
+<body><main><header><div class="eyebrow">个人资讯 · 中文阅读版</div><h1>{esc(report['title'])}</h1><p>AI 工具、智能体、开源与出海</p><p class="meta">最新采集：{latest}（北京时间 / UTC+8）</p><p class="schedule">每天 08:17 / 14:17 / 20:17 · 最近 {HISTORY_DAYS} 天 · 已收录 {len(editions)} 期</p><a href="brief.html">每日简报 · 10:30 提醒</a> · <a href="latest.md">本期文字版</a> · <a href="history.json">各期数据</a></header>
+<p class="notice">中文标题经分句摘译与术语整理，可展开原文核对。仅收录有明确工具、工程、开源项目或出海业务信息的条目。X 为搜索索引线索，可能延迟或遗漏；来源失败不代表没有更新。</p>
 <section aria-label="按采集时间查看"><h2>按采集时间查看</h2><p class="meta">时间戳是本次采集时间，每条资讯另标原帖或索引时间。在线页面在采集成功后更新，重新打开或刷新即可查看；下载副本不会自动更新。</p><div class="edition-picker"><label for="edition-select">选择采集时间</label><select id="edition-select">{''.join(options)}</select></div>{''.join(parts)}</section>
 <footer><strong>阅读边界</strong><ul>{''.join('<li>'+esc(v.replace('NEW', '首次展示'))+'</li>' for v in report['limitations'])}</ul><p>历史保留最近 {HISTORY_DAYS} 天、最多 {HISTORY_LIMIT} 期；缓存丢失时可能不完整。定时调度可能延迟。</p><p>英译中模型：Argos / OPUS-MT 1.9，Jörg Tiedemann 与 Santhosh Thottingal，CC-BY 4.0。使用免费运行环境的 CPU，不调用付费 API。</p></footer></main>
 <script type="module">document.getElementById('edition-select').addEventListener('change', function() {{ for (const edition of document.querySelectorAll('.edition')) {{ edition.open = edition.id === this.value; }} }});</script></body></html>'''
@@ -497,6 +498,8 @@ def main():
     p.add_argument("--state", type=Path, default=Path(".state/state.json"))
     p.add_argument("--output", type=Path, default=Path("site"))
     p.add_argument("--history", type=Path, default=Path(".state/history.json"))
+    p.add_argument("--briefs", type=Path, default=Path(".state/briefs.json"))
+    p.add_argument("--brief-only", action="store_true", help="publish today's digest using existing collections")
     p.add_argument("--import-history-dir", type=Path)
     p.add_argument("--check", action="store_true", help="validate configuration without network access")
     args = p.parse_args()
@@ -505,13 +508,26 @@ def main():
         print(f"Configuration valid: {len(cfg['sources'])} sources")
         return 0
     now = datetime.now(UTC)
-    report, state = collect(cfg, load_state(args.state), now)
-    editions = merge_history(load_history(args.history, args.import_history_dir), report, now)
+    previous = load_history(args.history, args.import_history_dir)
+    if args.brief_only:
+        if not previous:
+            raise ValueError("No collected reports are available for the daily brief")
+        report = max(previous, key=lambda r: r["generated_at"])
+        state = None
+    else:
+        report, state = collect(cfg, load_state(args.state), now)
+    editions = merge_history(previous, report, now)
+    refine_reports(editions, cfg)
     from translate_titles import localize_reports
     localize_reports(editions, model_ready=os.environ.get("RADAR_MODEL_READY", "success") == "success")
     write_reports(args.output, report, editions)
+    from daily_brief import load_briefs, update_briefs, write_briefs
+    briefs = update_briefs(editions, load_briefs(args.briefs, args.import_history_dir), now, publish=args.brief_only)
+    brief = write_briefs(args.output, editions, briefs, now)
+    atomic_json(args.briefs, {"briefs": briefs})
     atomic_json(args.history, {"version": 1, "reports": editions})
-    atomic_json(args.state, state)
+    if state is not None:
+        atomic_json(args.state, state)
     summary = f"Sources available: {report['available_sources']}/{len(report['sources'])}; items: {len(report['items'])}; new: {report['new_count']}; health: {report['health']}"
     print(summary)
     print(f"History editions: {len(editions)}; Chinese titles: {report['translation']['ready']}/{len(report['items'])}")
@@ -525,6 +541,8 @@ def main():
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
             f.write(f"health={report['health']}\n")
             f.write(f"translation_status={report['translation']['status']}\n")
+            f.write(f"translation_error={report['translation']['error']}\n")
+            f.write(f"brief_stale={'true' if args.brief_only and brief['stale'] else 'false'}\n")
     # Complete the report even when sources fail, so the user can see evidence.
     # The workflow checks health after preserving the diagnostic artifact.
     return 0

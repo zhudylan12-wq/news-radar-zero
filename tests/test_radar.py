@@ -102,7 +102,7 @@ class RadarTests(unittest.TestCase):
 
     def test_truncated_items_are_not_marked_as_delivered(self):
         self.cfg["max_items"] = 1
-        fetcher = lambda *args: rss(("AI one", "AI two"))
+        fetcher = lambda *args: rss(("AI tool one", "AI tool two"))
         first, saved = self.collect(fetcher)
         second, _ = self.collect(fetcher, saved)
         self.assertEqual(second["new_count"], 1)
@@ -169,10 +169,10 @@ class RadarTests(unittest.TestCase):
             radar.parse_source(b'[]', source)
 
     def test_html_escapes_titles_and_rejects_script_urls(self):
-        report, _ = self.collect(lambda *args: rss(("&lt;script&gt;alert(1)&lt;/script&gt; &amp; AI",)))
+        report, _ = self.collect(lambda *args: rss(("&lt;script&gt;alert(1)&lt;/script&gt; &amp; AI tool",)))
         page = radar.render_html(report)
         self.assertNotIn("<script>", page)
-        self.assertIn("&amp; AI", page)
+        self.assertIn("&amp; AI tool", page)
         self.assertEqual(radar.safe_url("javascript:alert(1)"), "")
         self.assertEqual(radar.safe_url("https://user:pass@example.com"), "")
 

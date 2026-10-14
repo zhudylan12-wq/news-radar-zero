@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import Mock
 
 import radar
-from translate_titles import localize_reports, prepare_model
+from translate_titles import localize_reports, prepare_model, TRANSLATION_VERSION
 from test_radar import NOW, ROOT, rss, state
 
 
@@ -71,6 +71,7 @@ class HistoryTranslationTests(unittest.TestCase):
     def test_previous_translation_is_reused_without_model_call(self):
         older = copy.deepcopy(self.report)
         older["items"][0]["title_zh"] = "旧缓存译文"
+        older["items"][0]["translation_version"] = TRANSLATION_VERSION
         backend = Mock(side_effect=AssertionError("must not call model"))
         localize_reports([self.report, older], backend)
         backend.assert_not_called()

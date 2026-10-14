@@ -3,12 +3,20 @@ name: News radar
 on:
   schedule:
     - cron: '17 0,6,12 * * *' # UTC+8: 08:17, 14:17, 20:17
+    - cron: '20 2 * * *' # UTC+8: 10:20 digest, ahead of the 10:30 reminder
   workflow_dispatch:
+    inputs:
+      daily_brief:
+        description: Generate the daily brief from existing collections
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
       - radar.py
       - translate_titles.py
+      - relevance.py
+      - daily_brief.py
       - requirements-translation.txt
       - config.json
       - tests/**
@@ -80,6 +88,13 @@ jobs:
           for run_id in $(gh run list --workflow radar.yml --status success --limit 3 --json databaseId --jq '.[].databaseId'); do
             gh run download "$run_id" --name news-radar --dir "$RUNNER_TEMP/radar-history/$run_id" || echo "Previous artifact unavailable; skipped."
           done
+      - name: Restore daily briefs
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .state/briefs.json
+          key: radar-briefs-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            radar-briefs-v1-
       - name: Restore fingerprints and cooldowns
         uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
@@ -91,7 +106,13 @@ jobs:
         id: collect
         env:
           RADAR_MODEL_READY: ${{ steps.model.outcome == 'success' && steps.translation_dependencies.outcome == 'success' && 'success' || 'unavailable' }}
-        run: python radar.py --import-history-dir "$RUNNER_TEMP/radar-history"
+          BRIEF_ONLY: ${{ github.event.schedule == '20 2 * * *' || inputs.daily_brief == true }}
+        run: |
+          if [ "$BRIEF_ONLY" = "true" ]; then
+            python radar.py --brief-only --import-history-dir "$RUNNER_TEMP/radar-history"
+          else
+            python radar.py --import-history-dir "$RUNNER_TEMP/radar-history"
+          fi
       - name: Keep the report for one day
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -115,15 +136,25 @@ jobs:
         with:
           path: site/
           retention-days: 1
+      - name: Save daily briefs
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .state/briefs.json
+          key: radar-briefs-v1-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Surface a complete outage
         if: steps.collect.outputs.health == 'unavailable'
         run: |
           echo 'All sources unavailable. Diagnostic report is in the news-radar artifact.'
           exit 1
-      - name: Surface incomplete Chinese translation
-        if: steps.collect.outputs.translation_status != 'complete'
+      - name: Surface translation engine failure
+        if: steps.collect.outputs.translation_error != ''
         run: |
-          echo 'Some Chinese titles are unavailable. The diagnostic report preserves original titles.'
+          echo 'Offline translation failed. The diagnostic report preserves original titles.'
+          exit 1
+      - name: Surface stale daily brief
+        if: steps.collect.outputs.brief_stale == 'true'
+        run: |
+          echo 'The daily brief has no recent collection. Keeping the previous live report.'
           exit 1
 
   deploy:
