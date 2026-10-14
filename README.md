@@ -2,7 +2,7 @@
 
 定时整理 **AI 工具、智能体、开源、出海产品**的公开资讯。采集使用 Python 标准库，标题用离线模型译成中文。没有付费 API、付费模型接口、数据库、自购服务器或账号 Cookie。
 
-**已在 [zhudylan12-wq/news-radar-zero](https://github.com/zhudylan12-wq/news-radar-zero) 启用 GitHub Actions，两次云端验证运行成功（2026-10-14）。**
+**已在 [zhudylan12-wq/news-radar-zero](https://github.com/zhudylan12-wq/news-radar-zero) 启用 GitHub Actions；逐次云端验证结果见验证记录（2026-10-14）。**
 
 [查看最新运行与报告附件](https://github.com/zhudylan12-wq/news-radar-zero/actions/workflows/radar.yml) · [验证记录](context/verification.md)
 
@@ -19,7 +19,7 @@
 
 每次生成 `site/index.html`、`site/latest.md`、`site/latest.json` 和 `site/history.json`。默认最近 48 小时，每来源最多 8 条，总计最多 60 条。GitHub 使用独立的 14 天发现窗口。
 
-页面和标题以中文展示，原始标题可展开核对。英译中使用 Argos / OPUS-MT 1.9 的离线模型，在免费 runner 的 CPU 上运行。模型包约 71 MB，下载后通过固定 SHA-256 校验并缓存；不用在线翻译服务或 API key。分类仍使用关键词规则，不生成额外新闻事实。机器翻译可能不准确；模型不可用时明确标注并保留原文。许可与作者见 [THIRD_PARTY.md](THIRD_PARTY.md)。
+页面和标题以中文展示，原始标题可展开核对。英译中使用 Argos / OPUS-MT 1.9 的离线模型，在免费 runner 的 CPU 上运行。模型包约 71 MB，从 Argos 官方数据站下载，通过固定 SHA-256 校验和实际翻译检查后缓存；不用在线翻译服务或 API key。分类仍使用关键词规则，不生成额外新闻事实。机器翻译可能不准确；模型不可用时明确标注并保留原文，中文标题不完整会让工作流报错。许可与作者见 [THIRD_PARTY.md](THIRD_PARTY.md)。
 
 ## 本地运行
 
