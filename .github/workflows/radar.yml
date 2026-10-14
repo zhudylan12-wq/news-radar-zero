@@ -1,0 +1,91 @@
+name: News radar
+
+on:
+  schedule:
+    - cron: '17 0,6,12 * * *' # UTC+8: 08:17, 14:17, 20:17
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - radar.py
+      - config.json
+      - tests/**
+      - .github/workflows/radar.yml
+
+# No repository writes and no personal access token are needed.
+permissions:
+  contents: read
+
+concurrency:
+  group: news-radar
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Refuse private-repository compute to avoid consuming a shared paid quota.
+    if: github.event.repository.private == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      health: ${{ steps.collect.outputs.health }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Validate and test
+        run: |
+          python radar.py --check
+          python -m unittest discover -s tests -v
+      - name: Restore fingerprints and cooldowns
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .state/state.json
+          key: radar-state-v1-${{ hashFiles('config.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            radar-state-v1-${{ hashFiles('config.json') }}-
+      - name: Collect public feeds and build report
+        id: collect
+        run: python radar.py
+      - name: Keep the report for one day
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: news-radar
+          path: site/
+          if-no-files-found: error
+          retention-days: 1
+      - name: Save fingerprints after report upload
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: .state/state.json
+          key: radar-state-v1-${{ hashFiles('config.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Package optional Pages site
+        if: vars.ENABLE_PAGES == 'true'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: site/
+          retention-days: 1
+      - name: Surface a complete outage
+        if: steps.collect.outputs.health == 'unavailable'
+        run: |
+          echo 'All sources unavailable. Diagnostic report is in the news-radar artifact.'
+          exit 1
+
+  deploy:
+    if: vars.ENABLE_PAGES == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy the report
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

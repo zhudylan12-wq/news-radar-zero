@@ -1,0 +1,32 @@
+{
+  "title": "零成本资讯雷达",
+  "timezone": "Asia/Taipei",
+  "lookback_hours": 48,
+  "max_items": 60,
+  "max_items_per_source": 8,
+  "request_timeout_seconds": 20,
+  "source_interval_seconds": 2,
+  "user_agent": "NewsRadarZero/1.0 (public feed reader)",
+  "topics": {
+    "AI 工具": ["AI", "LLM", "ChatGPT", "Claude", "Gemini", "Cursor", "coding", "AI tool", "人工智能"],
+    "Agent": ["agent", "agents", "agentic", "MCP", "Codex", "automation", "智能体"],
+    "开源": ["open source", "open-source", "github", "local", "self-hosted", "开源"],
+    "出海": ["SaaS", "indie", "indiehacker", "launch", "startup", "marketing", "SEO", "growth", "出海"]
+  },
+  "keyword_context": {
+    "agent": ["AI", "LLM", "model", "tool", "tools", "code", "coding", "API", "APIs", "automation", "workflow", "developer", "software", "prompt", "imagegen", "computer", "MCP"],
+    "agents": ["AI", "LLM", "model", "tool", "tools", "code", "coding", "API", "APIs", "automation", "workflow", "developer", "software", "prompt", "imagegen", "computer", "MCP"]
+  },
+  "sources": [
+    {"id": "reddit-local-llama", "name": "Reddit · LocalLLaMA", "kind": "rss", "platform": "Reddit", "access": "direct", "url": "https://www.reddit.com/r/LocalLLaMA/new/.rss?limit=25", "topics": ["AI 工具", "开源"]},
+    {"id": "reddit-chatgpt-coding", "name": "Reddit · ChatGPTCoding", "kind": "rss", "platform": "Reddit", "access": "direct", "url": "https://www.reddit.com/r/ChatGPTCoding/new/.rss?limit=25", "topics": ["AI 工具", "Agent"]},
+    {"id": "reddit-saas", "name": "Reddit · SaaS", "kind": "rss", "platform": "Reddit", "access": "direct", "url": "https://www.reddit.com/r/SaaS/new/.rss?limit=25", "topics": ["出海"]},
+    {"id": "reddit-side-project", "name": "Reddit · SideProject", "kind": "rss", "platform": "Reddit", "access": "direct", "url": "https://www.reddit.com/r/SideProject/new/.rss?limit=25", "topics": ["出海"], "require_keyword": true},
+    {"id": "x-ai-tools", "name": "X 索引 · AI 工具", "kind": "google_news", "platform": "X", "access": "indexed", "query": "site:x.com (\"AI tool\" OR \"AI app\" OR \"AI coding\") when:2d", "topics": ["AI 工具"], "require_keyword": true},
+    {"id": "x-agents-open-source", "name": "X 索引 · Agent / 开源", "kind": "google_news", "platform": "X", "access": "indexed", "query": "site:x.com (\"AI agent\" OR MCP OR \"open source\") when:2d", "topics": ["Agent", "开源"], "require_keyword": true},
+    {"id": "x-global-products", "name": "X 索引 · 出海产品", "kind": "google_news", "platform": "X", "access": "indexed", "query": "site:x.com (SaaS OR indiehacker OR \"product launch\") when:2d", "topics": ["出海"], "require_keyword": true},
+    {"id": "github-agents", "name": "GitHub · 新 Agent 仓库", "kind": "github", "platform": "GitHub", "access": "direct", "query": "topic:ai-agents stars:>=10 archived:false fork:false", "created_within_days": 14, "topics": ["Agent", "开源"]},
+    {"id": "hn-ai", "name": "Hacker News · AI", "kind": "hackernews", "platform": "Hacker News", "access": "indexed", "query": "AI", "topics": ["AI 工具"], "require_keyword": true},
+    {"id": "hn-saas", "name": "Hacker News · SaaS", "kind": "hackernews", "platform": "Hacker News", "access": "indexed", "query": "SaaS", "topics": ["出海"], "require_keyword": true}
+  ]
+}
