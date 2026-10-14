@@ -81,6 +81,15 @@ class HistoryTranslationTests(unittest.TestCase):
         self.assertEqual(self.report["translation"]["status"], "unavailable")
         self.assertIn("中文翻译暂不可用", radar.render_html(self.report))
 
+    def test_sentencepiece_markers_are_cleaned_in_new_and_cached_translations(self):
+        localize_reports([self.report], lambda titles: ["▁repo_name — ▁新的智能体"])
+        self.assertEqual(self.report["items"][0]["title_zh"], "repo_name — 新的智能体")
+        self.report["items"][0]["title_zh"] = "▁旧缓存译文"
+        backend = Mock(side_effect=AssertionError("must not call model"))
+        localize_reports([self.report], backend)
+        backend.assert_not_called()
+        self.assertEqual(self.report["items"][0]["title_zh"], "旧缓存译文")
+
     def test_chinese_original_is_not_sent_for_translation(self):
         self.report["items"][0]["title"] = "开源智能体的新版本正式发布"
         backend = Mock()

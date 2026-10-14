@@ -78,8 +78,13 @@ class OfflineTranslator:
         batches = self.model.translate_batch(encoded, beam_size=4, max_batch_size=8,
                                              max_input_length=512, max_decoding_length=384,
                                              replace_unknowns=True, length_penalty=0.2)
-        return [prefix + self.tokenizer.decode(result.hypotheses[0]).strip().replace("AI代理", "AI 智能体").replace("AI 代理", "AI 智能体")
+        return [prefix + clean_translation(self.tokenizer.decode(result.hypotheses[0])).replace("AI代理", "AI 智能体").replace("AI 代理", "AI 智能体")
                 for prefix, result in zip(prefixes, batches)]
+
+
+def clean_translation(title):
+    # Some model outputs retain SentencePiece's word boundary marker after decoding.
+    return re.sub(r"\s+", " ", str(title).replace("▁", " ")).strip()[:640]
 
 
 def already_chinese(title):
@@ -94,7 +99,7 @@ def localize_reports(reports, translator=None, model_ready=True):
     for report in reports:
         for item in report["items"]:
             if item.get("title_zh"):
-                known[item["title"]] = item["title_zh"]
+                known[item["title"]] = clean_translation(item["title_zh"])
     for report in reports:
         for item in report["items"]:
             title = item["title"]
@@ -115,7 +120,7 @@ def localize_reports(reports, translator=None, model_ready=True):
             if len(translated) != len(titles):
                 raise ValueError("Translation batch size mismatch")
             for title, chinese in zip(titles, translated):
-                chinese = re.sub(r"\s+", " ", str(chinese)).strip()[:640]
+                chinese = clean_translation(chinese)
                 valid = bool(re.search(r"[\u4e00-\u9fff]", chinese))
                 for item in pending[title]:
                     if valid:
